@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>福岡自由行 - Fukuoka Journey</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: 日式風格字型 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            jp: {
+              paper: '#F7F5F0',       /* 和紙原色背景 */
+              card: '#FFFFFF',        /* 卡片純白 */
+              matcha: '#6B7A59',      /* 抹茶綠 */
+              sakura: '#E08A8A',      /* 櫻花粉 (必拍) */
+              ramen: '#D97724',       /* 暖橘 (必吃) */
+              indigo: '#2C3E50',      /* 藍靛色 (主色) */
+              shopping: '#8E44AD',    /* 紫色 (必買) */
+              accent: '#C0392B',      /* 朱紅色 (緊急/標示) */
+              starlux: '#9B7B38',     /* 星宇金 */
+              sub: '#7F8C8D'
+            }
+          },
+          fontFamily: {
+            serif: ['"Noto Serif JP"', 'serif'],
+            sans: ['"Noto Sans JP"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #F7F5F0;
+      color: #333333;
+      font-family: 'Noto Sans JP', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .active-scale { transition: transform 0.1s ease; }
+    .active-scale:active { transform: scale(0.97); }
+  </style>
+</head>
+<body class="flex justify-center">
+
+<div id="app" class="w-full max-w-md min-h-screen bg-jp-paper flex flex-col justify-between shadow-2xl relative overflow-hidden pb-20">
+
+  <!-- Header 區塊 -->
+  <header class="sticky top-0 z-50 bg-jp-paper/90 backdrop-blur-md border-b border-stone-200 px-5 py-4 flex justify-between items-end">
+    <div>
+      <div class="flex items-center space-x-2">
+        <span class="text-xs bg-jp-accent text-white px-2 py-0.5 rounded-full font-bold tracking-widest">日本九州</span>
+        <span class="text-xs text-jp-sub font-medium">6 天 5 夜自由行</span>
+      </div>
+      <h1 class="text-2xl font-serif font-bold text-jp-indigo mt-1 tracking-wide">福岡自由行</h1>
+    </div>
+    <div class="text-right">
+      <div class="text-xs text-jp-sub"><i class="fa-regular font-bold fa-calendar-days mr-1"></i>日期</div>
+      <div class="text-xs font-bold text-jp-indigo">10/01 - 10/06</div>
+    </div>
+  </header>
+
+  <!-- 主要內容區塊 -->
+  <main class="flex-1 px-4 py-4 overflow-y-auto no-scrollbar">
+
+    <!-- TAB 1: 行程 Tab -->
+    <div v-if="activeTab === 'itinerary'" class="space-y-4">
+      
+      <!-- 日期與備選選擇按鈕橫向滾動列 -->
+      <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
+        <button @click="selectedDayFilter = 'ALL'" 
+                :class="selectedDayFilter === 'ALL' ? 'bg-jp-indigo text-white font-bold shadow-md' : 'bg-white text-stone-600 border border-stone-200'"
+                class="px-3 py-1.5 rounded-xl text-xs whitespace-nowrap active-scale transition-all flex-shrink-0">
+          <i class="fa-solid fa-layer-group mr-1"></i>全部天數
+        </button>
+        <button v-for="day in itinerary" :key="day.dayNum" 
+                @click="selectedDayFilter = day.dayNum" 
+                :class="selectedDayFilter === day.dayNum ? 'bg-jp-indigo text-white font-bold shadow-md' : 'bg-white text-stone-600 border border-stone-200'"
+                class="px-3 py-1.5 rounded-xl text-xs whitespace-nowrap active-scale transition-all flex-shrink-0">
+          Day {{ day.dayNum }} ({{ day.shortDate }})
+        </button>
+        <button @click="selectedDayFilter = 'BACKUP'" 
+                :class="selectedDayFilter === 'BACKUP' ? 'bg-jp-ramen text-white font-bold shadow-md' : 'bg-white text-jp-ramen border border-jp-ramen/30'"
+                class="px-3 py-1.5 rounded-xl text-xs whitespace-nowrap active-scale transition-all flex-shrink-0">
+          <i class="fa-solid fa-clock-rotate-left mr-1"></i>備選/代排
+        </button>
+      </div>
+
+      <!-- 每日卡片 區塊 (Day 1 - Day 6) -->
+      <template v-if="selectedDayFilter !== 'BACKUP'">
+        <div v-for="(day, dIndex) in filteredItinerary" :key="dIndex" class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200/80">
+          <!-- 每日 Header -->
+          <div class="flex justify-between items-center border-b border-stone-100 pb-3 mb-4">
+            <div class="flex items-center space-x-3">
+              <span class="bg-jp-indigo text-white text-sm font-bold w-10 h-10 rounded-xl flex items-center justify-center font-serif shadow-sm">
+                Day {{ day.dayNum }}
+              </span>
+              <div>
+                <h3 class="font-bold text-jp-indigo text-base">{{ day.date }}</h3>
+                <p class="text-xs text-jp-sub"><i class="fa-solid fa-location-dot text-jp-accent mr-1"></i>{{ day.location }}</p>
+              </div>
+            </div>
+            <span class="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-lg">{{ day.spots.length }} 個項目</span>
+          </div>
+
+          <!-- 景點列表 -->
+          <div class="space-y-4">
+            <div v-for="(spot, sIndex) in day.spots" :key="sIndex" class="bg-stone-50/80 rounded-xl p-3.5 border border-stone-100 relative">
+              
+              <div class="flex justify-between items-start mb-1.5">
+                <div class="flex items-center space-x-2">
+                  <span :class="getCategoryBadgeClass(spot.category)" class="text-[10px] px-2 py-0.5 rounded-md font-bold">
+                    {{ spot.category }}
+                  </span>
+                  <h4 class="font-bold text-jp-indigo text-sm">{{ spot.name }}</h4>
+                </div>
+                <span v-if="spot.time" class="text-[11px] font-bold text-jp-accent bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">
+                  <i class="fa-regular fa-clock mr-1"></i>{{ spot.time }}
+                </span>
+              </div>
+
+              <p class="text-xs text-stone-600 mb-3 leading-relaxed">{{ spot.description }}</p>
+
+              <!-- 標籤區塊 -->
+              <div class="flex flex-wrap gap-1.5 mb-3">
+                <span v-if="spot.mustEat" class="bg-jp-ramen/10 text-jp-ramen border border-jp-ramen/30 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  <i class="fa-solid fa-utensils mr-1"></i>必吃：{{ spot.mustEat }}
+                </span>
+                <span v-if="spot.mustBuy" class="bg-jp-shopping/10 text-jp-shopping border border-jp-shopping/30 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  <i class="fa-solid fa-bag-shopping mr-1"></i>必買：{{ spot.mustBuy }}
+                </span>
+                <span v-if="spot.mustPhoto" class="bg-jp-sakura/10 text-jp-sakura border border-jp-sakura/30 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  <i class="fa-solid fa-camera mr-1"></i>必拍：{{ spot.mustPhoto }}
+                </span>
+              </div>
+
+              <!-- 拍照小技巧 -->
+              <div v-if="spot.photoTip" class="bg-jp-matcha/10 border border-jp-matcha/20 rounded-lg p-2 mb-3 text-[11px] text-jp-matcha flex items-start space-x-1.5">
+                <i class="fa-solid fa-lightbulb mt-0.5"></i>
+                <span><strong>拍照 Tip：</strong>{{ spot.photoTip }}</span>
+              </div>
+
+              <!-- 功能與導航按鈕 -->
+              <div class="flex justify-between items-center border-t border-stone-200/50 pt-2.5 mt-2">
+                <div class="flex items-center space-x-2">
+                  <label class="cursor-pointer bg-white border border-stone-300 text-stone-600 hover:bg-stone-50 px-2.5 py-1 rounded-lg text-xs font-medium flex items-center space-x-1 active-scale">
+                    <i class="fa-solid fa-image text-jp-matcha"></i>
+                    <span>記錄照片</span>
+                    <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, spot)">
+                  </label>
+                  <div v-if="spot.userPhotos && spot.userPhotos.length" class="flex -space-x-1 overflow-hidden">
+                    <img v-for="(img, imgIdx) in spot.userPhotos" :key="imgIdx" :src="img" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover">
+                  </div>
+                </div>
+
+                <div class="flex items-center space-x-1.5">
+                  <a v-if="spot.klookUrl" :href="spot.klookUrl" target="_blank" class="bg-orange-500 text-white text-[11px] px-2 py-1.5 rounded-lg font-bold flex items-center space-x-1 shadow-sm active-scale">
+                    <i class="fa-solid fa-ticket text-[10px]"></i>
+                    <span>憑證</span>
+                  </a>
+                  <a :href="spot.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name + ' 福岡')}`" target="_blank" class="bg-jp-indigo text-white text-[11px] px-2.5 py-1.5 rounded-lg font-medium flex items-center space-x-1 shadow-sm active-scale">
+                    <i class="fa-solid fa-location-arrow text-[10px]"></i>
+                    <span>導航</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 備選 / 代排卡片區塊 -->
+      <template v-else>
+        <div class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200 space-y-3">
+          <div class="border-b border-stone-100 pb-2 flex justify-between items-center">
+            <h3 class="font-serif font-bold text-jp-ramen text-base flex items-center">
+              <i class="fa-solid fa-clock-rotate-left mr-2"></i>熱門代排 / 備選口袋名單
+            </h3>
+            <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold">{{ backupSpots.length }} 個地點</span>
+          </div>
+          <p class="text-xs text-jp-sub leading-relaxed">行程空檔或現場排隊時間過長時，可彈性替換的精選地點：</p>
+
+          <div class="space-y-3 pt-1">
+            <div v-for="(bSpot, bIdx) in backupSpots" :key="bIdx" class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/70 space-y-2">
+              <div class="flex justify-between items-start">
+                <div class="flex items-center space-x-2">
+                  <span :class="getCategoryBadgeClass(bSpot.category)" class="text-[10px] px-2 py-0.5 rounded font-bold">
+                    {{ bSpot.category }}
+                  </span>
+                  <h4 class="font-bold text-jp-indigo text-sm">{{ bSpot.name }}</h4>
+                </div>
+                <a :href="bSpot.mapUrl" target="_blank" class="bg-jp-indigo text-white text-[11px] px-2.5 py-1.5 rounded-lg font-medium flex items-center space-x-1 shadow-sm active-scale">
+                  <i class="fa-solid fa-location-arrow text-[10px]"></i>
+                  <span>導航</span>
+                </a>
+              </div>
+              <p class="text-xs text-stone-600 leading-relaxed">{{ bSpot.description }}</p>
+              <div v-if="bSpot.mustEat || bSpot.mustBuy" class="text-[10px] text-jp-ramen font-bold">
+                <span v-if="bSpot.mustEat" class="mr-2">必吃：{{ bSpot.mustEat }}</span>
+                <span v-if="bSpot.mustBuy">必買：{{ bSpot.mustBuy }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+    </div>
+
+    <!-- TAB 2: 指南工具箱 Tab -->
+    <div v-if="activeTab === 'guide'" class="space-y-5">
+      <div class="flex space-x-2 border-b border-stone-300 pb-2 overflow-x-auto no-scrollbar">
+        <button v-for="sub in guideSubTabs" :key="sub.id" @click="activeGuideSubTab = sub.id" 
+                :class="activeGuideSubTab === sub.id ? 'bg-jp-indigo text-white font-bold' : 'bg-white text-stone-600 border border-stone-200'"
+                class="px-3 py-1.5 rounded-xl text-xs whitespace-nowrap active-scale transition-all flex-shrink-0">
+          {{ sub.name }}
+        </button>
+      </div>
+
+      <!-- (1) 行李打包清單 -->
+      <div v-if="activeGuideSubTab === 'packing'" class="space-y-4">
+        <div v-for="(category, catName) in packingList" :key="catName" class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-serif font-bold text-jp-indigo text-sm flex items-center">
+              <i class="fa-solid fa-box-archive mr-2 text-jp-matcha"></i>{{ catName }}
+            </h3>
+            <button @click="addItemPrompt(packingList, catName)" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-2.5 py-1 rounded-lg font-bold">
+              + 新增項目
+            </button>
+          </div>
+
+          <ul class="space-y-2.5">
+            <li v-for="(item, idx) in category" :key="idx" class="border-b border-stone-100 pb-2 text-xs flex justify-between items-center">
+              <label class="flex items-center space-x-2 cursor-pointer flex-1">
+                <input type="checkbox" v-model="item.checked" class="rounded text-jp-matcha focus:ring-0 w-4 h-4">
+                <span :class="{'line-through text-stone-400': item.checked}" class="text-stone-700 font-medium">{{ item.name }}</span>
+              </label>
+              
+              <div class="flex items-center space-x-2">
+                <div class="flex items-center border rounded border-stone-200 bg-stone-50">
+                  <button @click="updateQty(item, -1)" class="px-2 py-0.5 text-stone-500 font-bold">-</button>
+                  <span class="px-2 text-stone-700 font-bold">{{ item.qty }}</span>
+                  <button @click="updateQty(item, 1)" class="px-2 py-0.5 text-stone-500 font-bold">+</button>
+                </div>
+                <button @click="removeItem(category, idx)" class="text-stone-400 hover:text-jp-accent ml-1">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- (2) 獨立：日本購物清單 (可新增選項與照片) -->
+      <div v-if="activeGuideSubTab === 'shopping'" class="space-y-4">
+        <div class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200 space-y-4">
+          <div class="flex justify-between items-center border-b border-stone-100 pb-3">
+            <div>
+              <h3 class="font-serif font-bold text-jp-shopping text-base flex items-center">
+                <i class="fa-solid fa-bag-shopping mr-2"></i>日本必買購物清單
+              </h3>
+              <p class="text-[11px] text-stone-500 mt-0.5">紀錄想購買的藥妝、潮流服飾與限定名產</p>
+            </div>
+            <button @click="addShoppingItemPrompt" class="text-xs bg-jp-shopping text-white hover:bg-purple-800 px-3 py-1.5 rounded-xl font-bold shadow-sm active-scale">
+              + 新增購物項目
+            </button>
+          </div>
+
+          <ul class="space-y-3">
+            <li v-for="(item, idx) in shoppingList" :key="idx" class="bg-stone-50 p-3 rounded-xl border border-stone-200/80 space-y-2">
+              <div class="flex justify-between items-center">
+                <label class="flex items-center space-x-2.5 cursor-pointer flex-1">
+                  <input type="checkbox" v-model="item.checked" class="rounded text-jp-shopping focus:ring-0 w-4 h-4">
+                  <span :class="{'line-through text-stone-400': item.checked}" class="text-jp-indigo font-bold text-sm">{{ item.name }}</span>
+                </label>
+
+                <div class="flex items-center space-x-2">
+                  <label class="cursor-pointer bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 px-2 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 active-scale shadow-sm">
+                    <i class="fa-solid fa-camera text-jp-shopping"></i>
+                    <span>照片</span>
+                    <input type="file" accept="image/*" class="hidden" @change="handleItemImageUpload($event, item)">
+                  </label>
+
+                  <div class="flex items-center border rounded-lg border-stone-300 bg-white shadow-sm">
+                    <button @click="updateQty(item, -1)" class="px-2 py-0.5 text-stone-500 font-bold">-</button>
+                    <span class="px-2 text-stone-800 font-bold text-xs">{{ item.qty }}</span>
+                    <button @click="updateQty(item, 1)" class="px-2 py-0.5 text-stone-500 font-bold">+</button>
+                  </div>
+
+                  <button @click="removeItem(shoppingList, idx)" class="text-stone-400 hover:text-jp-accent ml-1">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 上傳的商品參考照片預覽列 -->
+              <div v-if="item.photos && item.photos.length" class="flex space-x-2 pt-1 overflow-x-auto no-scrollbar">
+                <img v-for="(img, imgIdx) in item.photos" :key="imgIdx" :src="img" class="h-16 w-16 rounded-lg object-cover border border-stone-300 shadow-sm flex-shrink-0">
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- (3) 日本旅遊規範提醒 -->
+      <div v-if="activeGuideSubTab === 'rules'" class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200 space-y-3">
+        <h3 class="font-serif font-bold text-jp-indigo text-base flex items-center border-b pb-2">
+          <i class="fa-solid fa-hand-raised text-jp-ramen mr-2"></i>日本旅遊禮儀與規範
+        </h3>
+        <ul class="space-y-2.5 text-xs text-stone-700 leading-relaxed">
+          <li class="flex items-start"><i class="fa-solid fa-circle-dot text-jp-accent mt-1 mr-2 text-[8px]"></i><span><strong>室內與大眾運輸：</strong>請保持靜音，電車上請勿通話。</span></li>
+          <li class="flex items-start"><i class="fa-solid fa-circle-dot text-jp-accent mt-1 mr-2 text-[8px]"></i><span><strong>垃圾分類：</strong>街頭垃圾桶極少，請隨身攜帶塑膠袋裝垃圾帶回飯店處理。</span></li>
+          <li class="flex items-start"><i class="fa-solid fa-circle-dot text-jp-accent mt-1 mr-2 text-[8px]"></i><span><strong>溫泉泡湯禮儀：</strong>入池前必須先全身洗淨，毛巾不可浸入池中。</span></li>
+          <li class="flex items-start"><i class="fa-solid fa-circle-dot text-jp-accent mt-1 mr-2 text-[8px]"></i><span><strong>餐廳訂位守則：</strong>西新初喜預約 12:00，請務必提前 10 分鐘抵達。</span></li>
+        </ul>
+      </div>
+
+      <!-- (4) 緊急資訊 -->
+      <div v-if="activeGuideSubTab === 'emergency'" class="bg-jp-card rounded-2xl p-4 shadow-sm border border-jp-accent/30 space-y-3">
+        <h3 class="font-serif font-bold text-jp-accent text-base flex items-center border-b border-stone-100 pb-2">
+          <i class="fa-solid fa-triangle-exclamation mr-2"></i>日本緊急聯絡電話
+        </h3>
+        <div class="grid grid-cols-2 gap-3">
+          <a href="tel:110" class="bg-red-50 border border-red-200 p-3 rounded-xl flex items-center space-x-3 active-scale">
+            <i class="fa-solid fa-shield-halved text-red-600 text-xl"></i>
+            <div>
+              <div class="text-xs text-stone-500">警察局</div>
+              <div class="font-bold text-red-600 text-lg">110</div>
+            </div>
+          </a>
+          <a href="tel:119" class="bg-red-50 border border-red-200 p-3 rounded-xl flex items-center space-x-3 active-scale">
+            <i class="fa-solid fa-truck-medical text-red-600 text-xl"></i>
+            <div>
+              <div class="text-xs text-stone-500">消防救護</div>
+              <div class="font-bold text-red-600 text-lg">119</div>
+            </div>
+          </a>
+        </div>
+        <div class="bg-stone-50 border border-stone-200 p-3 rounded-xl text-xs space-y-1">
+          <div class="font-bold text-jp-indigo flex items-center">
+            <i class="fa-solid fa-building-columns mr-1.5 text-jp-indigo"></i>駐日台北經濟文化代表處 (福岡分處)
+          </div>
+          <div class="text-stone-600">電話：+81-92-734-2810</div>
+          <div class="text-stone-600">急難救助專線：+81-90-1989-0868</div>
+        </div>
+      </div>
+
+      <!-- (5) 資料總匯 -->
+      <div v-if="activeGuideSubTab === 'docs'" class="space-y-3">
+        <div class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200">
+          <h4 class="font-bold text-jp-indigo text-xs mb-2 flex items-center justify-between">
+            <span><i class="fa-solid fa-plane mr-2 text-jp-starlux"></i>星宇航空 (STARLUX)</span>
+            <span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-bold">機票憑證</span>
+          </h4>
+          <div class="space-y-2">
+            <div class="bg-stone-50 p-2.5 rounded-xl text-xs border border-stone-100 flex justify-between font-bold text-stone-800">
+              <span>去程 JX840</span>
+              <span>TPE ➔ FUK</span>
+            </div>
+            <div class="bg-stone-50 p-2.5 rounded-xl text-xs border border-stone-100 flex justify-between font-bold text-stone-800">
+              <span>回程 JX841</span>
+              <span>FUK ➔ TPE</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-jp-card rounded-2xl p-4 shadow-sm border border-stone-200 flex justify-between items-center">
+          <div>
+            <h4 class="font-bold text-jp-indigo text-xs"><i class="fa-solid fa-hotel mr-2 text-jp-matcha"></i>Otani Yoshizuka (吉塚飯店)</h4>
+            <p class="text-[11px] text-stone-500">入住時間: 10/01 - 10/06</p>
+          </div>
+          <a href="https://www.google.com/maps/search/?api=1&query=Otani+Yoshizuka+Fukuoka" target="_blank" class="bg-jp-indigo text-white text-xs px-3 py-1.5 rounded-lg font-bold active-scale">
+            地圖導航
+          </a>
+        </div>
+
+        <div class="bg-jp-card rounded-2xl p-4 shadow-sm border border-orange-200 space-y-2">
+          <h4 class="font-bold text-orange-600 text-xs flex items-center">
+            <i class="fa-solid fa-ticket mr-2"></i>Klook / 餐廳預訂憑證
+          </h4>
+          <div class="flex justify-between items-center bg-orange-50/60 p-2 rounded-xl text-xs">
+            <span class="text-stone-700 font-medium">10/02 由布院＆別府一日遊</span>
+            <a href="https://www.klook.com/zh-TW/activity/95611-beppu-onsen-yufuin-one-day-tour-fukuoka/?package_id=671421" target="_blank" class="text-xs bg-orange-500 text-white px-2 py-1 rounded font-bold">開啟憑證</a>
+          </div>
+          <div class="flex justify-between items-center bg-orange-50/60 p-2 rounded-xl text-xs">
+            <span class="text-stone-700 font-medium">10/03 高千穗峽＆南阿蘇公園</span>
+            <a href="https://www.klook.com/zh-TW/activity/142971-minamiaso-park-takachiho-gorge-tenyasu-river-sakura-tour/?package_id=672620" target="_blank" class="text-xs bg-orange-500 text-white px-2 py-1 rounded font-bold">開啟憑證</a>
+          </div>
+          <div class="flex justify-between items-center bg-orange-50/60 p-2 rounded-xl text-xs">
+            <span class="text-stone-700 font-medium">10/04 西新初喜 12:00 訂位</span>
+            <a href="https://maps.app.goo.gl/vTb6YuRLmUcu4cYJ7?g_st=ic" target="_blank" class="text-xs bg-jp-indigo text-white px-2 py-1 rounded font-bold">地圖位置</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 3: 天氣 Tab -->
+    <div v-if="activeTab === 'weather'" class="space-y-4">
+      <div class="bg-jp-card rounded-2xl p-5 shadow-sm border border-stone-200 text-center">
+        <h3 class="font-serif font-bold text-jp-indigo text-lg mb-1">福岡 Weather Forecast</h3>
+        <p class="text-xs text-jp-sub mb-4">預計旅遊期間天氣預測 (10/01 - 10/06)</p>
+
+        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4 border border-amber-100 flex items-center justify-around">
+          <i class="fa-solid fa-sun text-amber-500 text-4xl animate-pulse"></i>
+          <div class="text-left">
+            <div class="text-3xl font-bold text-jp-indigo">23°C</div>
+            <div class="text-xs text-stone-600">涼爽秋晴 · 體感 22°C</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-6 gap-1 text-center text-xs">
+          <div v-for="w in weatherForecast" :key="w.day" class="bg-stone-50 p-1.5 rounded-xl border border-stone-100">
+            <div class="text-stone-500 text-[10px] mb-1">{{ w.day }}</div>
+            <i :class="w.icon" class="text-sm my-1"></i>
+            <div class="font-bold text-stone-700 mt-1 text-[11px]">{{ w.temp }}</div>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-jp-matcha/10 p-3 rounded-xl text-left text-xs text-jp-matcha border border-jp-matcha/20 space-y-1">
+          <div><i class="fa-solid fa-shirt mr-1"></i><strong>穿搭提醒：</strong>10 月早晚溫差較大。</div>
+          <div><i class="fa-solid fa-mountain mr-1"></i><strong>阿蘇/高千穗叮嚀 (10/03)：</strong>山區氣溫較福岡市區低 3~5°C，請準備保暖外套。</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Nav 底部導覽列 -->
+  <footer class="fixed bottom-0 max-w-md w-full bg-white/95 backdrop-blur-md border-t border-stone-200 px-6 py-2 flex justify-around items-center z-50">
+    <button @click="activeTab = 'itinerary'" :class="activeTab === 'itinerary' ? 'text-jp-indigo font-bold' : 'text-stone-400'" class="flex flex-col items-center space-y-1 active-scale">
+      <i class="fa-solid fa-map-location-dot text-lg"></i>
+      <span class="text-[10px]">行程</span>
+    </button>
+    <button @click="activeTab = 'guide'" :class="activeTab === 'guide' ? 'text-jp-indigo font-bold' : 'text-stone-400'" class="flex flex-col items-center space-y-1 active-scale">
+      <i class="fa-solid fa-toolbox text-lg"></i>
+      <span class="text-[10px]">指南工具箱</span>
+    </button>
+    <button @click="activeTab = 'weather'" :class="activeTab === 'weather' ? 'text-jp-indigo font-bold' : 'text-stone-400'" class="flex flex-col items-center space-y-1 active-scale">
+      <i class="fa-solid fa-cloud-sun text-lg"></i>
+      <span class="text-[10px]">天氣</span>
+    </button>
+  </footer>
+
+</div>
+
+<!-- Vue 3 應用程式邏輯 -->
+<script>
+  const { createApp, ref, computed } = Vue;
+
+  createApp({
+    setup() {
+      const activeTab = ref('itinerary');
+      const activeGuideSubTab = ref('packing');
+      const selectedDayFilter = ref('ALL');
+
+      const guideSubTabs = [
+        { id: 'packing', name: '打包清單' },
+        { id: 'shopping', name: '購物清單' },
+        { id: 'rules', name: '日本規範' },
+        { id: 'emergency', name: '緊急救援' },
+        { id: 'docs', name: '憑證總匯' }
+      ];
+
+      const itinerary = ref([
+        {
+          dayNum: 1,
+          date: '10/01 (四)',
+          shortDate: '10/01',
+          location: '福岡抵達 ➔ Check-in ➔ 肉之山翔燒肉 ➔ 唐吉訶德天神店',
+          spots: [
+            {
+              name: '星宇航空 JX840 抵達福岡',
+              category: '交通',
+              description: '搭乘星宇航空 JX840 抵達福岡機場，辦理入境並準備前往飯店。',
+              mustPhoto: '星宇機內餐點與飛機外觀',
+              userPhotos: []
+            },
+            {
+              name: 'Otani Yoshizuka (吉塚飯店)',
+              category: '酒店',
+              description: '前往 Otani Yoshizuka 辦理入住，放置行李並稍微休息。',
+              mapUrl: 'https://www.google.com/maps/search/?api=1&query=Otani+Yoshizuka+Fukuoka',
+              userPhotos: []
+            },
+            {
+              name: '肉之山翔 (黑毛和牛燒肉)',
+              category: '食物',
+              time: '19:00',
+              description: '位於大名的熱門黑毛和牛燒肉店，享有高評價特選和牛。',
+              mustEat: 'A5 極上黑毛和牛盛合、厚切牛舌、土鍋銀飯',
+              mapUrl: 'https://maps.app.goo.gl/byRBaD5RM4UxoMCG6?g_st=ipc',
+              photoTip: '拍和牛特寫展現迷人油花與質感。',
+              userPhotos: []
+            },
+            {
+              name: '唐吉訶德 福岡天神本店',
+              category: '購物',
+              description: '24小時營業大型折扣店，採購日本零食、藥妝與生活雜貨。',
+              mustBuy: '熱門日系藥妝、限定零食、伴手禮',
+              mapUrl: 'https://maps.app.goo.gl/546GWX5MAT3CD6fB7?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: '24小時超商甜點採購',
+              category: '食物',
+              description: '採購話題甜點，品嚐 IG 熱門便利商店軟綿布丁與和牛泡麵。',
+              mustEat: '日本超商熱門限定布丁、和牛泡麵',
+              mapUrl: 'https://maps.app.goo.gl/ADDEXDWKBhbXT74P7?g_st=ic',
+              userPhotos: []
+            }
+          ]
+        },
+        {
+          dayNum: 2,
+          date: '10/02 (五)',
+          shortDate: '10/02',
+          location: '由布院＆別府海地獄 ➔ 太宰府天滿宮 ➔ 武藏和牛三吃',
+          spots: [
+            {
+              name: '由布院 & 別府海地獄 (Klook 一日遊)',
+              category: '活動',
+              description: '漫步湯布院溫泉小鎮、金鱗湖與別府海地獄。',
+              mustEat: 'B-speak 蛋糕捲、豐後牛可樂餅',
+              mustBuy: '由布院柚子胡椒',
+              mustPhoto: '金鱗湖晨霧與夢幻水上鳥居',
+              klookUrl: 'https://www.klook.com/zh-TW/activity/95611-beppu-onsen-yufuin-one-day-tour-fukuoka/?package_id=671421',
+              photoTip: '金鱗湖最佳取景角度為水上鳥居與湖面白霧。',
+              userPhotos: []
+            },
+            {
+              name: 'Loop a Bread (由布院麵包店)',
+              category: '食物',
+              description: '由布院熱門手作麵包店，口感極致軟綿。',
+              mustEat: '純鮮奶手撕吐司',
+              mapUrl: 'https://maps.app.goo.gl/pftE39fJAd1nmjg88?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: 'SAWAWA Dazaifu (太宰府抹茶專賣)',
+              category: '食物',
+              description: '太宰府參道上的濃郁抹茶甜點名店。',
+              mustEat: '濃抹茶霜淇淋、抹茶蕨餅',
+              mapUrl: 'https://maps.app.goo.gl/iEmu5nnoRrWo41Vo8?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: '天山太宰府ぷりん店 (鬼瓦最中 & 布丁)',
+              category: '食物',
+              description: '太宰府必吃人氣甜點，以鬼瓦造型最中餅與濃郁布丁聞名。',
+              mustEat: '鬼瓦草莓最中餅、太宰府手作布丁',
+              mapUrl: 'https://maps.app.goo.gl/eRdt9V7itLqptMam9?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: '一蘭拉麵 太宰府參道店',
+              category: '食物',
+              description: '全日本唯一使用「五角形合格碗」的一蘭分店，象徵祈求考運與順利。',
+              mustEat: '五角形合格拉麵',
+              mustPhoto: '五角形碗與長麵條特寫',
+              photoTip: '特寫五角形合格碗與「決定合格」長麵條！',
+              userPhotos: []
+            },
+            {
+              name: '黒毛和牛 博多牛まぶし 武藏',
+              category: '食物',
+              description: '享用黑毛和牛三吃（原味、加配料、淋高湯茶漬飯）。',
+              mustEat: '黑毛和牛三吃重 (博多牛まぶし)',
+              mapUrl: 'https://maps.app.goo.gl/QMrt2P2UCmeL67Cn7?g_st=ic',
+              userPhotos: []
+            }
+          ]
+        },
+        {
+          dayNum: 3,
+          date: '10/03 (六)',
+          shortDate: '10/03',
+          location: '高千穗峽＆南阿蘇 ➔ Truffle麵包 ➔ Shin Shin拉麵',
+          spots: [
+            {
+              name: '高千穗峽 & 南阿蘇公園 & 天安河原 (Klook 一日遊)',
+              category: '景點',
+              description: '探訪神話之鄉真名井瀑布、神秘天安河原與阿蘇大自然。',
+              mustEat: '高千穗流水麵、阿蘇赤牛丼',
+              mustPhoto: '高千穗峽谷划船與瀑布景致',
+              klookUrl: 'https://www.klook.com/zh-TW/activity/142971-minamiaso-park-takachiho-gorge-tenyasu-river-sakura-tour/?package_id=672620',
+              photoTip: '在大橋上往下俯拍小船穿梭於瀑布旁的景致。',
+              userPhotos: []
+            },
+            {
+              name: 'TruffleBAKERY (博多店)',
+              category: '食物',
+              description: '來自東京的爆紅麵包店，主打極致香濃的白松露鹽可頌。',
+              mustEat: '招牌白松露鹽麵包',
+              mapUrl: 'https://maps.app.goo.gl/i8168ZsitFgEixhw7?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: 'Hakata Shin Shin 拉麵',
+              category: '食物',
+              description: '福岡極具指標性的極細麵豚骨拉麵名店，湯頭滑順濃郁且不油膩。',
+              mustEat: '博多 ShinShin 招牌豚骨拉麵、炒飯',
+              mapUrl: 'https://www.google.com/maps/search/?api=1&query=Hakata+Shin+Shin+Fukuoka',
+              photoTip: '拍攝濃郁極細拉麵特寫。',
+              userPhotos: []
+            },
+            {
+              name: 'Imonne Hakata (博多地瓜甜點專賣)',
+              category: '食物',
+              description: '品嚐熟成烤地瓜冰淇淋與地瓜聖代，香甜濃郁。',
+              mustEat: '熟成烤地瓜冰淇淋、紫薯聖代',
+              mapUrl: 'https://maps.app.goo.gl/U3YJK56aDxS2VZka8?g_st=ic',
+              userPhotos: []
+            }
+          ]
+        },
+        {
+          dayNum: 4,
+          date: '10/04 (日)',
+          shortDate: '10/04',
+          location: '西新初喜 ➔ I’m donut? ➔ 天神大名購物 ➔ 舒芙蕾',
+          spots: [
+            {
+              name: '西新初喜 (黑毛和牛壽喜燒/水瀧鍋)',
+              category: '食物',
+              time: '12:00',
+              description: '創業百年的老鋪，提供極上黑毛和牛壽喜燒與黑豚涮涮鍋，質感極佳。',
+              mustEat: '特選黑毛和牛壽喜燒套餐',
+              mapUrl: 'https://maps.app.goo.gl/vTb6YuRLmUcu4cYJ7?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: 'I’m donut? 福岡店',
+              category: '食物',
+              description: '話題爆棚的生甜甜圈排隊名店，質地如空氣般蓬鬆柔軟，入口即化。',
+              mustEat: '招牌生甜甜圈 (I\'m donut?)',
+              mapUrl: 'https://maps.app.goo.gl/1RZoyMJLmmnvpiik6?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: 'Kinetics Fukuoka (天神大名潮牌選品)',
+              category: '購物',
+              description: '東京發跡的高質感潮流選品店，齊聚許多日系 Streetwear 品牌與限量限定單品。',
+              mustBuy: 'Kinetics 限定潮流服飾、聯名配件',
+              mapUrl: 'https://www.google.com/maps/search/?api=1&query=Kinetics+Fukuoka',
+              userPhotos: []
+            },
+            {
+              name: 'BILLY\'S ENT Fukuoka (潮鞋專賣)',
+              category: '購物',
+              description: '日本指標性球鞋店，常常能挖寶到各大品牌的日本獨家限定配色與獨家款式。',
+              mustBuy: 'BILLY\'S 限定球鞋、日買限定鞋款',
+              mapUrl: 'https://www.google.com/maps/search/?api=1&query=null',
+              userPhotos: []
+            },
+            {
+              name: 'Chrome Hearts 福岡 (克羅心專賣店)',
+              category: '購物',
+              description: '頂級銀飾品牌 Chrome Hearts 專賣店，熱門採購限定銀飾與經典周邊配件。',
+              mustBuy: '克羅心銀飾、品牌限定商品',
+              mapUrl: 'https://www.google.com/maps/search/?api=1&query=Chrome+Hearts+Fukuoka',
+              userPhotos: []
+            },
+            {
+              name: 'Café del SOL (日式舒芙蕾鬆餅)',
+              category: '食物',
+              description: '天神大名超人氣鬆餅店，蓬鬆柔軟的舒芙蕾搭配濃郁抹茶冰品。',
+              mustEat: '招牌水果舒芙蕾鬆餅、濃郁抹茶冰',
+              mapUrl: 'https://maps.app.goo.gl/fcDphYbDD6o7jPYa6?g_st=ic',
+              photoTip: '錄下輕輕晃動盤子時舒芙蕾彈跳的短影片。',
+              userPhotos: []
+            },
+            {
+              name: '芋屋金次郎 (現炸蜜糖地瓜條)',
+              category: '食物',
+              description: '高知縣老鋪現炸蜜糖地瓜條，外脆內軟香甜可口。',
+              mustEat: '現炸蜜糖地瓜條',
+              mapUrl: 'https://maps.app.goo.gl/pty7E4rg4JWD3thK6?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: '久留米大砲拉麵 (天神店)',
+              category: '食物',
+              description: '九州濃郁豚骨拉麵始祖之一，湯頭濃厚香氣十足。',
+              mustEat: '昔ラーメン (濃郁豚骨拉麵加豬油渣)',
+              mapUrl: 'https://maps.app.goo.gl/JkrSWwVhPMQugfUK7?g_st=ic',
+              userPhotos: []
+            }
+          ]
+        },
+        {
+          dayNum: 5,
+          date: '10/05 (一)',
+          shortDate: '10/05',
+          location: '神社參拜 ➔ 明太子麵包 ➔ 牛腸鍋 ➔ 一蘭 ➔ 唐吉訶德中洲店',
+          spots: [
+            {
+              name: '櫛田神社',
+              category: '景點',
+              description: '參拜博多總鎮守櫛田神社，欣賞展示的巨大的博多祇園山笠飾山與百年古樹。',
+              mustPhoto: '巨大飾山笠與神社大鳥居',
+              mapUrl: 'https://maps.app.goo.gl/xxtve5S57255Qdbq7?g_st=ic',
+              photoTip: '站在飾山笠下方仰拍以展現其宏偉氣勢。',
+              userPhotos: []
+            },
+            {
+              name: 'Dacomecca (博多麵包名店)',
+              category: '食物',
+              description: '朝聖博多站超人氣爆餡麵包店，感受滿滿剛出爐麵包香氣。',
+              mustEat: '主廚特製漢堡麵包',
+              mapUrl: 'https://maps.app.goo.gl/fFaygqRdDP6VEZVq6?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: 'THE FULL FULL HAKATA (明太子法國麵包名店)',
+              category: '食物',
+              description: '福岡超紅明太子法國麵包專賣店，外皮酥脆內餡滿滿濃郁明太子醬。',
+              mustEat: '明太子法國麵包 (めんたいフランス)',
+              mapUrl: 'https://maps.app.goo.gl/A8ffnNiJgYCDL8ht7?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: 'FUK COFFEE',
+              category: '食物',
+              description: '以機場與飛行航空為主題的超人氣質感咖啡廳。',
+              mustEat: '昭和硬布丁加香草冰淇淋',
+              mapUrl: 'https://www.google.com/maps/search/?api=1&query=FUK+COFFEE+Fukuoka',
+              photoTip: '將登機牌造型貼紙與硬布丁一同入鏡拍攝。',
+              userPhotos: []
+            },
+            {
+              name: '福岡麵包超人兒童博物館 in Mall',
+              category: '景點',
+              description: '位於博多 Riverain Mall 內，適合採購限定可愛周邊與造型麵包。',
+              mustEat: '麵包超人現做造型麵包',
+              mapUrl: 'https://maps.app.goo.gl/3AJTuQjNMJhBmacc8?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: '一慶 (Ikkei) 炙燒牛腸鍋',
+              category: '食物',
+              description: '福岡元祖炙燒牛腸鍋，先以炭火炙燒牛腸再入鍋，香氣逼人且不油膩。',
+              mustEat: '元祖炙燒牛腸鍋 (炙りもつ鍋)、強棒麵',
+              mapUrl: 'https://maps.app.goo.gl/EC2326tiGz6JQDWE6?g_st=ic',
+              userPhotos: []
+            },
+            {
+              name: '一蘭拉麵 總店 (中洲)',
+              category: '食物',
+              description: '朝聖一蘭總部大樓，整棟掛滿紅燈籠極具氣勢。',
+              mustEat: '天然豚骨拉麵',
+              mustPhoto: '中洲紅燈籠整棟大樓夜景',
+              mapUrl: 'https://maps.app.goo.gl/JVt8TkgbfmSi9mnq7?g_st=ic',
+              photoTip: '站在對面馬路仰拍整棟紅色燈籠樓閣夜景。',
+              userPhotos: []
+            },
+            {
+              name: '唐吉訶德 中洲店',
+              category: '購物',
+              description: '位於中洲川端站上方，回國前的最後24小時藥妝美妝補貨站。',
+              mustBuy: '各式伴手禮、日系彩妝、美妝用品',
+              mapUrl: 'https://maps.app.goo.gl/546GWX5MAT3CD6fB7?g_st=ic',
+              userPhotos: []
+            }
+          ]
+        },
+        {
+          dayNum: 6,
+          date: '10/06 (二)',
+          shortDate: '10/06',
+          location: ' Check-out ➔ 福岡機場 ➔ 返台',
+          spots: [
+            {
+              name: '福岡機場免稅店 (星宇 JX841 返台)',
+              category: '交通',
+              description: '辦理出境手續，並於機場免稅店做最後的伴手禮採購。',
+              mustBuy: '福砂屋長崎蛋糕、博多通饅頭、博多明太子',
+              userPhotos: []
+            }
+          ]
+        }
+      ]);
+
+      const backupSpots = ref([
+        {
+          name: 'FREAK\'S STORE 福岡 PARCO 店',
+          category: '購物',
+          description: '日系美式休閒（American Casual）指標品牌，精選高品質服飾與選品。',
+          mustBuy: 'FREAK\'S STORE 經典外套、美式休閒服飾',
+          mapUrl: 'https://maps.app.goo.gl/HG9FetJwM2kUGJb96?g_st=ic'
+        },
+        {
+          name: '十日惠比須神社',
+          category: '景點',
+          description: '祈求商業繁榮與良緣的歷史神社，氣氛寧靜祥和。',
+          mapUrl: 'https://maps.app.goo.gl/2vta2V7DcCGHS8qQ7?g_st=ic'
+        },
+        {
+          name: '博多一幸舍 (總本店/站前店)',
+          category: '食物',
+          description: '元祖泡系豚骨拉麵始祖，濃厚綿密的泡沫湯頭是豚骨控必吃首選。',
+          mustEat: '泡系特製豚骨拉麵',
+          mapUrl: 'https://maps.app.goo.gl/ZWfbTWBxbubFERju9?g_st=ic'
+        },
+        {
+          name: 'LOA 大丸福岡天神店',
+          category: '購物',
+          description: '位於大丸百貨內，精選美妝保養與話題髮油產品選品專櫃。',
+          mustBuy: 'LOA 話題髮油 / 香氛產品',
+          mapUrl: 'https://maps.app.goo.gl/gCECnmZz4ZSH2jne6?g_st=ic'
+        },
+        {
+          name: 'LE TALON 天神店',
+          category: '購物',
+          description: '日本超人氣女性鞋履選品店，專為現代女性打造舒適且具時尚感的鞋款。',
+          mustBuy: '日系質感女鞋 / 包款',
+          mapUrl: 'https://maps.app.goo.gl/SCBSwFgpfEqKv7bEA?g_st=ic'
+        }
+      ]);
+
+      const filteredItinerary = computed(() => {
+        if (selectedDayFilter.value === 'ALL') {
+          return itinerary.value;
+        }
+        return itinerary.value.filter(d => d.dayNum === selectedDayFilter.value);
+      });
+
+      const packingList = ref({
+        '隨身背包': [
+          { name: '護照正本', qty: 1, checked: true },
+          { name: '日幣現金 & 信用卡', qty: 1, checked: true },
+          { name: 'Klook 預訂憑證', qty: 1, checked: true }
+        ],
+        '手提行李（機艙）': [
+          { name: '行動電源 & 隨身充電線', qty: 1, checked: false },
+          { name: '薄外套 / 隨身藥品', qty: 1, checked: false }
+        ],
+        '托運行李': [
+          { name: '替換衣物 (6天)', qty: 6, checked: false },
+          { name: '保暖外套 (阿蘇/高千穗備用)', qty: 1, checked: false }
+        ]
+      });
+
+      const shoppingList = ref([
+        { name: '芋屋金次郎現炸地瓜條', qty: 3, checked: false, photos: [] },
+        { name: 'Chrome Hearts 飾品', qty: 1, checked: false, photos: [] },
+        { name: 'BILLY\'S / Kinetics 限定球鞋', qty: 1, checked: false, photos: [] },
+        { name: '一蘭合格碗 / 外帶麵包包', qty: 2, checked: false, photos: [] },
+        { name: 'LOA 髮油 / LE TALON 女鞋', qty: 1, checked: false, photos: [] },
+        { name: 'FREAK\'S STORE 服飾', qty: 1, checked: false, photos: [] }
+      ]);
+
+      const weatherForecast = ref([
+        { day: '10/01', temp: '23°C', icon: 'fa-solid fa-sun text-amber-500' },
+        { day: '10/02', temp: '22°C', icon: 'fa-solid fa-cloud-sun text-amber-400' },
+        { day: '10/03', temp: '19°C', icon: 'fa-solid fa-mountain text-stone-500' },
+        { day: '10/04', temp: '21°C', icon: 'fa-solid fa-sun text-amber-500' },
+        { day: '10/05', temp: '22°C', icon: 'fa-solid fa-cloud-sun text-amber-400' },
+        { day: '10/06', temp: '20°C', icon: 'fa-solid fa-cloud-rain text-blue-400' },
+      ]);
+
+      const getCategoryBadgeClass = (category) => {
+        const classes = {
+          '食物': 'bg-orange-100 text-orange-700',
+          '景點': 'bg-emerald-100 text-emerald-700',
+          '購物': 'bg-purple-100 text-purple-700',
+          '活動': 'bg-blue-100 text-blue-700',
+          '交通': 'bg-amber-100 text-amber-800',
+          '酒店': 'bg-stone-200 text-stone-700'
+        };
+        return classes[category] || 'bg-stone-100 text-stone-600';
+      };
+
+      const handleImageUpload = (event, spot) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (!spot.userPhotos) spot.userPhotos = [];
+            spot.userPhotos.push(e.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      const handleItemImageUpload = (event, item) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (!item.photos) item.photos = [];
+            item.photos.push(e.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      const addItemPrompt = (listObj, catName) => {
+        const itemName = prompt(`請輸入要在 [${catName}] 新增的項目名稱：`);
+        if (itemName) {
+          listObj[catName].push({ name: itemName, qty: 1, checked: false });
+        }
+      };
+
+      const addShoppingItemPrompt = () => {
+        const itemName = prompt('請輸入要新增的購物項目名稱：');
+        if (itemName) {
+          shoppingList.value.push({ name: itemName, qty: 1, checked: false, photos: [] });
+        }
+      };
+
+      const updateQty = (item, delta) => {
+        if (item.qty + delta >= 1) item.qty += delta;
+      };
+
+      const removeItem = (list, index) => {
+        list.splice(index, 1);
+      };
+
+      return {
+        activeTab,
+        activeGuideSubTab,
+        selectedDayFilter,
+        guideSubTabs,
+        itinerary,
+        backupSpots,
+        filteredItinerary,
+        packingList,
+        shoppingList,
+        weatherForecast,
+        getCategoryBadgeClass,
+        handleImageUpload,
+        handleItemImageUpload,
+        addItemPrompt,
+        addShoppingItemPrompt,
+        updateQty,
+        removeItem
+      };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
